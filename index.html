@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ACDA 2026 | URE ANDRADINA</title>
+<title>ACDA 2026 | Grade de Treinamentos</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--text:#182033;--muted:#6b7280;--line:#e2e5ea;--accent:#245bd6;--soft:#edf2ff;--danger:#a63a31}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
@@ -14,10 +14,10 @@ h1{margin:0;font-size:27px;letter-spacing:-.02em}.subtitle{color:var(--muted);ma
 .filters{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:12px}.filtergrid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}label{font-size:12px;color:var(--muted)}select,input{width:100%;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--text)}
 .actions{display:flex;gap:7px;align-items:end}.actions button,.tab{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;cursor:pointer}.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .tabs{display:flex;gap:7px;margin:11px 0}.panel{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px}.empty{text-align:center;color:var(--muted);padding:30px}
-.calendar{display:grid;grid-template-columns:64px repeat(5,minmax(170px,1fr));border:1px solid var(--line);border-radius:12px;overflow:auto;background:#fff;min-width:930px}
+.calendar{display:grid;grid-template-columns:64px repeat(5,minmax(230px,1fr));border:1px solid var(--line);border-radius:12px;overflow:auto;background:#fff;min-width:930px}
 .dayhead{height:48px;border-bottom:1px solid var(--line);padding:10px 7px;text-align:center;font-size:12px;font-weight:650;color:#4b5563;background:#fafbfc;position:sticky;top:0;z-index:4}
 .timehead{border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fafbfc;position:sticky;top:0;left:0;z-index:5}
-.daycol{position:relative;border-right:1px solid var(--line);min-height:1px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 29px,#edf0f3 30px)}
+.daycol{position:relative;border-right:1px solid var(--line);min-height:1px;min-width:230px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 29px,#edf0f3 30px)}
 .daycol:last-child{border-right:0}.times{position:relative;border-right:1px solid var(--line);background:#fafbfc}
 .time-label{position:absolute;right:7px;transform:translateY(-7px);font-size:10px;color:#8a919d;white-space:nowrap}
 .event{position:absolute;z-index:2;border-radius:8px;border:1px solid rgba(0,0,0,.10);padding:6px 7px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);font-size:11px;line-height:1.25}
@@ -66,10 +66,30 @@ function mmin(x){let p=String(x).split(":").map(Number);return p.length>1?p[0]*6
 function modClass(n){n=(n||"").toLowerCase();if(n.includes("basquete"))return"mod-basquete";if(n.includes("futsal"))return"mod-futsal";if(n.includes("voleibol")||n.includes("vôlei"))return"mod-voleibol";if(n.includes("handebol"))return"mod-handebol";if(n.includes("mesa"))return"mod-tenis";return"mod-outro"}
 function overlap(a,b){let a1=mmin(a.inicio),a2=mmin(a.fim),b1=mmin(b.inicio),b2=mmin(b.fim);return a1<b2&&b1<a2}
 function layoutDay(events){
-  events.sort((a,b)=>mmin(a.inicio)-mmin(b.inicio)||mmin(a.fim)-mmin(b.fim));
-  let groups=[];
-  events.forEach(e=>{let g=groups.find(g=>g.some(x=>overlap(x.h,e.h)));if(!g){g=[];groups.push(g)}g.push({h:e.h,t:e.t})});
-  groups.forEach(g=>{let cols=[];g.forEach(e=>{let c=0;while(cols[c]&&cols[c].some(x=>overlap(x.h,e.h)))c++;(cols[c]??=[]).push(e);e.col=c;e.total=cols.length});g.forEach(e=>e.total=Math.max(e.total,cols.length))});
+  // Interval partitioning: every event gets its own horizontal lane
+  // while it overlaps another event. The lane is released when the
+  // previous event ends, so unrelated events can reuse the same lane.
+  events.sort((a,b)=>mmin(a.h.inicio)-mmin(b.h.inicio)||mmin(a.h.fim)-mmin(b.h.fim));
+  const lanes=[];
+
+  events.forEach(e=>{
+    const start=mmin(e.h.inicio);
+    let lane=0;
+    while(lanes[lane]!==undefined && lanes[lane] > start) lane++;
+    e.col=lane;
+    lanes[lane]=mmin(e.h.fim);
+    e.total=Math.max(1, lanes.length);
+  });
+
+  // Recalculate the number of lanes for each overlap cluster.
+  for(let i=0;i<events.length;i++){
+    const e=events[i], start=mmin(e.h.inicio), end=mmin(e.h.fim);
+    const concurrent=events.filter(x=>{
+      const xs=mmin(x.h.inicio), xe=mmin(x.h.fim);
+      return xs < end && start < xe;
+    });
+    e.total=Math.max(1,...concurrent.map(x=>x.col+1));
+  }
   return events;
 }
 function eventHTML(t,h,top,height,col,total){
@@ -85,7 +105,7 @@ function renderGrade(ts){
   days.forEach(day=>{let ev=hs.filter(h=>h.dia===day).map(h=>({h,t:ts.find(t=>t.id===h.turma)})).filter(x=>x.t);ev=layoutDay(ev);header+=`<div class="daycol" style="height:${height}px">`;
     ev.forEach(e=>{let top=(mmin(e.h.inicio)-start)*scale,height=(mmin(e.h.fim)-mmin(e.h.inicio))*scale;header+=eventHTML(e.t,e.h,top,height,e.col,e.total)});header+='</div>'});
   header+='</div>';
-  $("content").innerHTML='<div class="panel"><div class="legend"><span>As aulas ocupam o espaço proporcional à duração.</span><span>Horários sobrepostos são distribuídos lado a lado.</span><span>⚠ cadastro incompleto</span></div>'+header+'</div>';bind();
+  $("content").innerHTML='<div class="panel" style="overflow-x:auto"><div class="legend"><span>As aulas ocupam o espaço proporcional à duração.</span><span>Horários simultâneos ficam lado a lado.</span><span>Role horizontalmente para ver todos os blocos.</span><span>⚠ cadastro incompleto</span></div>'+header+'</div>';bind();
 }
 function detail(t){let hs=horarios.filter(h=>h.turma===t.id);$("detail").innerHTML=`<div class="detailbox"><b>${esc(t.id)} · ${esc(t.escola)}</b><br><b>${esc(t.modalidade||"Cadastro incompleto")}</b> · ${esc(t.categoria||"")} · ${esc(t.naipe||"")}<br>Professor: ${esc(t.professor||"Não informado")}<div class="hours">${hs.map(h=>`<span class="hour">${esc(h.dia)} · ${esc(h.inicio)}–${esc(h.fim)}</span>`).join("")||"<span class='hour'>Sem horário</span>"}</div></div>`}
 function renderList(ts){$("content").innerHTML='<div class="list">'+ts.map(t=>`<div class="item ${incomplete(t)?"warn":""}" data-id="${esc(t.id)}"><b>${esc(t.id)} · ${esc(t.modalidade||"Cadastro incompleto")}</b>${esc(t.escola)}<br><small>${esc([t.categoria,t.naipe,t.professor].filter(Boolean).join(" · "))}</small><br><small>${horarios.filter(h=>h.turma===t.id).map(h=>`${h.dia} ${h.inicio}–${h.fim}`).join(" | ")||"Sem horário"}</small></div>`).join("")+'</div>';bind()}
