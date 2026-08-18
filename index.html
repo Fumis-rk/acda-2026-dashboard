@@ -25,6 +25,13 @@ table{width:100%;border-collapse:separate;border-spacing:5px;min-width:900px}th{
 .time{width:70px}.slot{border:1px solid var(--line);border-radius:10px;padding:9px;margin-bottom:5px;background:#fff;cursor:pointer;border-left:4px solid var(--accent)}
 .slot:hover{background:var(--accent2)}.slot strong{display:block;font-size:13px}.slot small{color:var(--muted);line-height:1.45}
 .slot.warn{background:var(--dangerbg);border-color:#e4b6b0;border-left-color:var(--danger)}
+.mod-basquete{border-left-color:#d97706!important}.mod-futsal{border-left-color:#16a34a!important}
+.mod-voleibol{border-left-color:#2563eb!important}.mod-handebol{border-left-color:#dc2626!important}
+.mod-tenis{border-left-color:#7c3aed!important}.mod-outro{border-left-color:#64748b!important}
+.modality-legend .mod-basquete{background:#fff1dc}.modality-legend .mod-futsal{background:#e8f7ed}
+.modality-legend .mod-voleibol{background:#eaf1ff}.modality-legend .mod-handebol{background:#ffe9e6}
+.modality-legend .mod-tenis{background:#f1eaff}
+
 .badge{display:inline-block;font-size:10px;border-radius:999px;padding:3px 7px;background:var(--accent2);color:var(--accent);margin-top:5px}.badge.warn{background:#ffe0db;color:var(--danger)}
 .list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.item{border:1px solid var(--line);border-radius:11px;padding:12px;cursor:pointer;background:#fff}.item:hover{border-color:var(--accent)}
 .item.warn{background:var(--dangerbg);border-color:#e4b6b0}.item b{display:block;margin-bottom:4px}.item small{color:var(--muted);line-height:1.5}
@@ -33,6 +40,8 @@ table{width:100%;border-collapse:separate;border-spacing:5px;min-width:900px}th{
 .detailbox .hours{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px}.hour{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}
 .empty{text-align:center;color:var(--muted);padding:28px}.error{background:var(--dangerbg);border:1px solid #e4b6b0;color:var(--danger);padding:14px;border-radius:10px}
 .legend{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}.legend span{font-size:11px;padding:4px 8px;border-radius:999px;background:#f0f2f6}
+.modality-legend{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}.modality-legend span{font-size:11px;padding:5px 9px;border-radius:999px;background:#f0f2f6}
+.slot{border-left-width:5px}.slot .modality{font-weight:700}.hero-note{background:var(--accent2);border:1px solid #d9e2ff;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px;color:#31446e}
 @media print{
  body{background:#fff}.app{max-width:none;padding:0}.filters,.tabs,.actions,.detail,.updated{display:none!important}
  .metrics{grid-template-columns:repeat(4,1fr)}.panel{border:0;padding:0}.scroll{overflow:visible}table{min-width:0}
@@ -44,10 +53,11 @@ table{width:100%;border-collapse:separate;border-spacing:5px;min-width:900px}th{
 <body>
 <div class="app">
 <header>
-  <div><h1>ACDA 2026</h1><div class="subtitle">Turmas e horários de treinamento</div></div>
+  <div><h1>ACDA 2026</h1><div class="subtitle">Grade de treinamentos · Secretaria de Educação</div></div>
   <div class="updated" id="updated">Carregando dados...</div>
 </header>
 
+<div class="hero-note">Use os filtros para montar a grade que você precisa. Clique em qualquer turma para ver seus horários.</div>
 <section class="metrics">
   <div class="metric"><span>Turmas</span><b id="mTurmas">—</b></div>
   <div class="metric"><span>Horários</span><b id="mHorarios">—</b></div>
@@ -167,15 +177,29 @@ function detail(t){
   const conflict=conflictIds().has(t.id);
   $("detail").innerHTML=`<div class="detailbox"><b>${esc(t.id)} · ${esc(t.escola)}</b><br><b>${esc(t.modalidade||"Cadastro incompleto")}</b> · ${esc(t.categoria||"")} · ${esc(t.naipe||"")}<br>Professor: ${esc(t.professor||"Não informado")}<div class="hours">${hs.map(h=>`<span class="hour">${esc(h.dia)} · ${esc(h.inicio)}–${esc(h.fim)}</span>`).join("")||"<span class='hour'>Sem horário cadastrado</span>"}</div>${conflict?'<div class="badge warn">⚠ conflito de horário do professor</div>':""}</div>`;
 }
+function modalityClass(name){
+  const n=(name||"").toLowerCase();
+  if(n.includes("basquete"))return "mod-basquete";
+  if(n.includes("futsal"))return "mod-futsal";
+  if(n.includes("voleibol")||n.includes("vôlei"))return "mod-voleibol";
+  if(n.includes("handebol"))return "mod-handebol";
+  if(n.includes("tênis de mesa")||n.includes("tenis de mesa"))return "mod-tenis";
+  return "mod-outro";
+}
+function modalityLegend(ts){
+  const names=[...new Set(ts.map(t=>t.modalidade).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  if(!names.length)return "";
+  return '<div class="modality-legend">'+names.map(n=>`<span class="${modalityClass(n)}">${esc(n)}</span>`).join("")+'</div>';
+}
 function slot(t,h){
   const bad=isIncomplete(t),conf=conflictIds().has(t.id);
-  return `<div class="slot ${bad?"warn":""}" data-id="${esc(t.id)}"><strong>${esc(t.modalidade||"Cadastro incompleto")}</strong><small>${esc([t.categoria,t.naipe].filter(Boolean).join(" · "))}<br>${esc(t.escola)}<br>${esc(h.inicio)}–${esc(h.fim)}${conf?"<br>⚠ conflito do professor":""}</small>${bad?'<span class="badge warn">Cadastro incompleto</span>':""}</div>`;
+  return `<div class="slot ${bad?"warn ":""}${modalityClass(t.modalidade)}" data-id="${esc(t.id)}"><strong class="modality">${esc(t.modalidade||"Cadastro incompleto")}</strong><small>${esc([t.categoria,t.naipe].filter(Boolean).join(" · "))}<br>${esc(t.escola)}<br>${esc(h.inicio)}–${esc(h.fim)}${conf?"<br>⚠ conflito do professor":""}</small>${bad?'<span class="badge warn">Cadastro incompleto</span>':""}</div>`;
 }
 function renderGrade(ts){
   const ids=new Set(ts.map(t=>t.id));const hs=horarios.filter(h=>ids.has(h.turma));
   const times=[...new Set(hs.map(h=>h.inicio))].sort();
   if(!times.length){$("content").innerHTML='<div class="panel empty">Nenhum horário encontrado.</div>';return}
-  let s='<div class="panel scroll"><div class="legend"><span>Blocos = turmas</span><span>⚠ = cadastro incompleto ou conflito</span></div><table><thead><tr><th>Horário</th>'+days.map(d=>`<th>${d}</th>`).join("")+'</tr></thead><tbody>';
+  let s='<div class="panel scroll">'+modalityLegend(ts)+'<div class="legend"><span>Blocos = turmas</span><span>⚠ = cadastro incompleto ou conflito</span></div><table><thead><tr><th>Horário</th>'+days.map(d=>`<th>${d}</th>`).join("")+'</tr></thead><tbody>';
   times.forEach(time=>{s+=`<tr><th class="time">${esc(time)}</th>`+days.map(day=>`<td>${hs.filter(h=>h.inicio===time&&h.dia===day).map(h=>slot(ts.find(t=>t.id===h.turma),h)).join("")||'<div class="empty">—</div>'}</td>`).join("")+"</tr>"});
   $("content").innerHTML=s+"</tbody></table></div>";bind();
 }
