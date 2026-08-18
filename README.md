@@ -1,60 +1,45 @@
-# ACDA 2026 — Dashboard
+# ACDA 2026 — Dashboard V3
 
-## Configuração já feita
+Esta versão mantém a Google Planilha como fonte e adiciona:
+- grade semanal;
+- filtros por escola, modalidade, categoria, naipe, professor e dia;
+- busca;
+- limpar filtros;
+- atualizar dados;
+- impressão;
+- visão por turmas;
+- visão por escolas;
+- alertas de cadastros incompletos;
+- detecção de conflito de horário do mesmo professor;
+- layout responsivo.
 
-O `config.js` deste pacote já contém os dois links CSV publicados da sua Google Planilha:
+## Atualização no GitHub
 
-- TURMAS
-- HORARIOS
+Substitua no seu repositório os arquivos:
+- index.html
+- config.js
 
-Não altere esses links.
+O README pode ser substituído também.
 
-## GitHub
-
-1. Crie um repositório, por exemplo `acda-2026-dashboard`.
-2. Envie:
-   - `index.html`
-   - `config.js`
-   - `README.md`
-
-## Netlify
-
-1. Entre no Netlify.
-2. `Add new project` → `Import an existing project`.
-3. Escolha o repositório do GitHub.
-4. Build command: deixe vazio.
-5. Publish directory: `.`
-6. Publique.
+Não altere os links do `config.js`.
 
 ## Google Planilhas
 
-A fonte do dashboard é a planilha publicada em CSV. Portanto:
+Continue usando as abas:
+- TURMAS
+- HORARIOS
 
-- continue editando as abas `TURMAS` e `HORARIOS`;
-- não mude os nomes dos cabeçalhos;
-- não exclua as colunas `ID_TURMA`, `ID_HORARIO` etc.;
-- o dashboard lerá os dados publicados quando for carregado.
+A publicação CSV já está configurada.
 
-## Estrutura
+## Deploy Netlify
 
-TURMAS = uma linha por turma.
+Se o Netlify estiver conectado ao GitHub, basta fazer commit/push dos arquivos novos. O Netlify deverá gerar um novo deploy automaticamente.
 
-HORARIOS = uma linha por horário da turma.
+Se não gerar:
+- Netlify → Deploys → Trigger deploy → Deploy site.
 
-Uma mesma turma pode ter vários horários sem ser duplicada.
+## Importante
 
-## Observação
+Como as abas estão publicadas na Web, não coloque dados pessoais/sensíveis nelas.
 
-Como as abas estão publicadas na Web, os dados dessas abas ficam acessíveis a quem tiver os links publicados. Não coloque informações pessoais ou sensíveis nessa base.
-
-## Próximos aprimoramentos
-
-Depois da publicação podemos acrescentar:
-
-- botão Atualizar;
-- filtro por dia;
-- impressão/PDF;
-- cores por modalidade;
-- tela de cadastro;
-- edição da planilha pelo dashboard;
-- domínio personalizado.
+Uma turma continua sendo uma linha em TURMAS e pode possuir vários registros em HORARIOS.
