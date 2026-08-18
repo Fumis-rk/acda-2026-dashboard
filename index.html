@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACDA 2026 — Dashboard</title>
+  <style>
+    :root{--bg:#f5f7fa;--card:#fff;--text:#172033;--muted:#687386;--line:#dfe4ea;--accent:#2457d6;--soft:#eef3ff;--warn:#a15c00;--warnbg:#fff4df}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1500px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:18px}
+    h1{margin:0;font-size:28px}.sub{color:var(--muted);margin-top:5px}.status{font-size:13px;color:var(--muted)}
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}.metric b{display:block;font-size:27px;margin-top:4px}.metric span{font-size:13px;color:var(--muted)}
+    .filters{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}.filtergrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+    label{font-size:13px;color:var(--muted)}select,input{width:100%;margin-top:5px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-size:14px}
+    .tabs{display:flex;gap:8px;margin:14px 0}.tabs button{border:1px solid var(--line);background:var(--card);padding:9px 14px;border-radius:10px;cursor:pointer}.tabs button.active{background:var(--accent);color:white;border-color:var(--accent)}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.scroll{overflow:auto}
+    table{width:100%;border-collapse:separate;border-spacing:5px;min-width:900px}th{font-size:13px;padding:8px;text-align:center}td{vertical-align:top;min-width:145px}.time{width:80px;color:var(--muted)}
+    .slot{border:1px solid #d6ddea;border-radius:11px;padding:9px;background:#fff;cursor:pointer;margin-bottom:5px}.slot:hover{border-color:var(--accent);background:var(--soft)}
+    .slot strong{display:block}.slot small{color:var(--muted);line-height:1.4}.badge{display:inline-block;padding:3px 7px;border-radius:999px;background:var(--soft);color:var(--accent);font-size:11px;margin-top:5px}
+    .warn{background:var(--warnbg);border-color:#edc889}.warn strong{color:var(--warn)}
+    .list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.item{border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}.item:hover{border-color:var(--accent)}
+    .school{margin-bottom:20px}.school h2{font-size:18px;margin:0 0 9px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .detail{margin-top:12px}.detailbox{border-left:4px solid var(--accent);background:var(--soft);padding:12px;border-radius:8px}
+    .empty{text-align:center;color:var(--muted);padding:30px}.error{padding:14px;background:#fff0f0;border:1px solid #e2b5b5;border-radius:10px;color:#8a2222}
+    @media(max-width:900px){.filtergrid{grid-template-columns:repeat(3,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}.list,.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.wrap{padding:14px}.top{display:block}.filtergrid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.list,.grid{grid-template-columns:1fr}h1{font-size:23px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><h1>ACDA 2026</h1><div class="sub">Dashboard de turmas e horários</div></div><div class="status" id="status">Carregando...</div></div>
+  <div class="metrics">
+    <div class="metric"><span>Turmas</span><b id="mTurmas">—</b></div>
+    <div class="metric"><span>Horários</span><b id="mHorarios">—</b></div>
+    <div class="metric"><span>Escolas</span><b id="mEscolas">—</b></div>
+    <div class="metric"><span>Cadastros incompletos</span><b id="mIncompletas">—</b></div>
+  </div>
+  <div class="filters">
+    <div class="filtergrid">
+      <label>Escola<select id="fEscola"></select></label>
+      <label>Modalidade<select id="fModalidade"></select></label>
+      <label>Categoria<select id="fCategoria"></select></label>
+      <label>Naipe<select id="fNaipe"></select></label>
+      <label>Professor<select id="fProfessor"></select></label>
+      <label>Busca<input id="search" placeholder="Escola, turma, professor..."></label>
+    </div>
+  </div>
+  <div class="tabs">
+    <button data-view="grade" class="active">Grade semanal</button>
+    <button data-view="turmas">Turmas</button>
+    <button data-view="escolas">Escolas</button>
+  </div>
+  <div id="content"></div><div class="detail" id="detail"></div>
+</div>
+<script src="config.js"></script>
+<script>
+const CFG=window.ACDA_CONFIG;
+let turmas=[],horarios=[],view="grade";
+const days=["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+const $=id=>document.getElementById(id);
+function norm(v){return String(v??"").trim()}
+function csv(text){const rows=[];let row=[],cell="",q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c=='"'&&q&&n=='"'){cell+='"';i++;continue}if(c=='"'){q=!q;continue}if(c==","&&!q){row.push(cell);cell="";continue}if((c=="\n"||c=="\r")&&!q){if(c=="\r"&&n=="\n")i++;row.push(cell);cell="";if(row.some(x=>x!==""))rows.push(row);row=[];continue}cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+function objects(text){const r=csv(text);if(!r.length)return[];const h=r[0].map(x=>norm(x).toUpperCase());return r.slice(1).map(a=>Object.fromEntries(h.map((k,i)=>[k,norm(a[i])]))).filter(o=>Object.values(o).some(Boolean))}
+async function loadSheet(url){const res=await fetch(url,{cache:"no-store"});if(!res.ok)throw new Error("Não foi possível ler a aba publicada.");return res.text()}
+async function load(){try{$("status").textContent="Atualizando dados...";const [t,h]=await Promise.all([loadSheet(CFG.turmasUrl),loadSheet(CFG.horariosUrl)]);turmas=objects(t).map(x=>({id:x.ID_TURMA,escola:x.ESCOLA,modalidade:x.MODALIDADE,categoria:x.CATEGORIA,naipe:x.NAIPE,professor:x.PROFESSOR,qtd:x.QTD_AULAS_SEMANA}));horarios=objects(h).map(x=>({id:x.ID_HORARIO,turma:x.ID_TURMA,dia:x.DIA,inicio:x.HORA_INICIO,fim:x.HORA_FIM}));fill();render();$("status").textContent="Dados atualizados • "+new Date().toLocaleString("pt-BR")}catch(e){$("status").textContent="Erro ao carregar";$("content").innerHTML='<div class="error"><b>Não foi possível carregar a planilha.</b><br>'+e.message+'<br><br>Confira o README e a configuração dos GIDs.</div>'}}
+function unique(k){return [...new Set(turmas.map(t=>t[k]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"))}
+function fillOne(id,values,first){$(id).innerHTML="<option>"+first+"</option>"+values.map(v=>`<option>${esc(v)}</option>`).join("")}
+function fill(){fillOne("fEscola",unique("escola"),"Todas");fillOne("fModalidade",unique("modalidade"),"Todas");fillOne("fCategoria",unique("categoria"),"Todas");fillOne("fNaipe",unique("naipe"),"Todos");fillOne("fProfessor",unique("professor"),"Todos")}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function filtered(){const f={escola:$("fEscola").value,modalidade:$("fModalidade").value,categoria:$("fCategoria").value,naipe:$("fNaipe").value,professor:$("fProfessor").value},q=$("search").value.toLowerCase().trim();return turmas.filter(t=>Object.entries(f).every(([k,v])=>v==="Todas"||v==="Todos"||t[k]===v)&&(!q||Object.values(t).join(" ").toLowerCase().includes(q)))}
+function incomplete(t){return !t.modalidade||!t.categoria||!t.naipe||!horarios.some(h=>h.turma===t.id)}
+function detail(t){const hs=horarios.filter(h=>h.turma===t.id);$("detail").innerHTML=`<div class="detailbox"><b>${esc(t.escola)} · ${esc(t.modalidade||"Dados incompletos")}</b><br>${esc([t.categoria,t.naipe,t.professor].filter(Boolean).join(" · "))}<br><small>${hs.length?hs.map(h=>`${esc(h.dia)} ${esc(h.inicio)}–${esc(h.fim)}`).join(" · "):"Sem horário cadastrado"}</small></div>`}
+function render(){const ts=filtered(),hs=horarios.filter(h=>ts.some(t=>t.id===h.turma));$("mTurmas").textContent=ts.length;$("mHorarios").textContent=hs.length;$("mEscolas").textContent=new Set(ts.map(t=>t.escola)).size;$("mIncompletas").textContent=ts.filter(incomplete).length;if(view==="grade")grade(ts,hs);else if(view==="turmas")turmaList(ts);else schoolList(ts)}
+function grade(ts,hs){const times=[...new Set(hs.map(h=>h.inicio))].sort();if(!times.length){$("content").innerHTML='<div class="panel empty">Nenhum horário encontrado para os filtros atuais.</div>';return}let s='<div class="panel scroll"><table><thead><tr><th>Horário</th>'+days.map(d=>`<th>${d}</th>`).join("")+'</tr></thead><tbody>';times.forEach(time=>{s+=`<tr><th class="time">${time}</th>`+days.map(day=>{const x=hs.filter(h=>h.inicio===time&&h.dia===day);return "<td>"+(x.length?x.map(h=>{const t=ts.find(t=>t.id===h.turma);return `<div class="slot ${incomplete(t)?"warn":""}" data-id="${t.id}"><strong>${esc(t.modalidade||"Cadastro incompleto")}</strong><small>${esc([t.categoria,t.naipe].filter(Boolean).join(" · "))}<br>${esc(t.escola)}<br>${esc(h.inicio)}–${esc(h.fim)}</small>${incomplete(t)?'<span class="badge">⚠ incompleto</span>':""}</div>`}).join(""):'<div class="empty">—</div>')+"</td>"}).join("")+"</tr>"});$("content").innerHTML=s+"</tbody></table></div>";bind()}
+function turmaList(ts){$("content").innerHTML=`<div class="list">${ts.map(t=>`<div class="item ${incomplete(t)?"warn":""}" data-id="${t.id}"><b>${esc(t.id)} · ${esc(t.modalidade||"Cadastro incompleto")}</b><br>${esc(t.escola)}<br><small>${esc([t.categoria,t.naipe,t.professor].filter(Boolean).join(" · "))}</small><br><small>${horarios.filter(h=>h.turma===t.id).map(h=>`${h.dia} ${h.inicio}–${h.fim}`).join(" | ")||"Sem horário"}</small></div>`).join("")}</div>`;bind()}
+function schoolList(ts){const g={};ts.forEach(t=>(g[t.escola]??=[]).push(t));$("content").innerHTML=Object.entries(g).map(([s,a])=>`<section class="school"><h2>${esc(s)} <span class="badge">${a.length} turmas</span></h2><div class="grid">${a.map(t=>`<div class="item ${incomplete(t)?"warn":""}" data-id="${t.id}"><b>${esc(t.modalidade||"Cadastro incompleto")}</b><br>${esc([t.categoria,t.naipe,t.professor].filter(Boolean).join(" · "))}</div>`).join("")}</div></section>`).join("")||'<div class="panel empty">Nenhuma turma encontrada.</div>';bind()}
+function bind(){document.querySelectorAll("[data-id]").forEach(e=>e.addEventListener("click",()=>{const t=turmas.find(x=>x.id===e.dataset.id);if(t)detail(t)}))}
+["fEscola","fModalidade","fCategoria","fNaipe","fProfessor","search"].forEach(id=>$(id).addEventListener("input",render));
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{view=b.dataset.view;document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");render()}));
+load();
+</script>
+</body>
+</html>
