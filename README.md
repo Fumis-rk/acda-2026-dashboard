@@ -1,12 +1,19 @@
-# ACDA 2026 — Dashboard V4
+# ACDA 2026 — V5 Agenda
 
-V4 mantém a integração com as abas TURMAS e HORARIOS publicadas no Google Sheets.
+V5 transforma a grade em uma agenda visual inspirada no Google Agenda.
 
-Novidades:
-- cores por modalidade;
-- legenda automática das modalidades filtradas;
-- cabeçalho mais claro;
-- indicação de uso dos filtros;
-- mantém grade, busca, filtros, impressão, escolas, turmas e alertas.
+- eixo vertical = horário;
+- eixo horizontal = dias;
+- altura do bloco = duração real da aula;
+- eventos simultâneos no mesmo dia são distribuídos lado a lado;
+- filtros e busca continuam funcionando;
+- dados continuam vindo das abas publicadas TURMAS e HORARIOS do Google Sheets.
 
-Para publicar no GitHub Pages, substitua `index.html` e `config.js` no repositório existente e faça commit. O GitHub Pages atualizará o site automaticamente.
+## Publicação
+
+Substitua `index.html` e `config.js` no repositório GitHub Pages existente e faça commit.
+
+Não altere os links do `config.js`.
+
+O endereço continua:
+https://fumis-rk.github.io/acda-2026-dashboard/
